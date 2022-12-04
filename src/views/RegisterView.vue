@@ -1,10 +1,8 @@
 <script lang="ts" setup>
-import usePromise from '@/composables/usePromise'
-import apiClient from '@/services/api'
-import type { ApiErrorsI } from '@/types/Api'
-import type { RegisterCredentialsI } from '@/types/Auth'
+import { useAuthStore } from '@/stores/auth'
 import { ref } from 'vue'
-import { getCsrftoken } from '@/composables/useAuth'
+
+const authStore = useAuthStore()
 
 const userData = ref({
   name: '',
@@ -13,46 +11,20 @@ const userData = ref({
   passwordConfirmation: '',
 })
 
-const errorMsg = ref('')
-
-const clearError = () => {
-  errorMsg.value = ''
-}
-
-const postUserData = async () => {
-  const prom = usePromise<
-    RegisterCredentialsI,
-    [string, RegisterCredentialsI],
-    ApiErrorsI
-  >(apiClient.post)
-
-  await prom.createPromise('/register', {
+const register = async () => {
+  await authStore.register({
     ...userData.value,
     password_confirmation: userData.value.passwordConfirmation,
   })
 
-  if (prom.error.value) {
-    errorMsg.value = prom.error.value.response.data.message
-    return false
+  if (!authStore.errorMsg) {
+    window.location.href = '/dashboard'
   }
-}
-
-const register = async () => {
-  clearError()
-
-  console.log('ask csrf')
-  const csrf = await getCsrftoken()
-  if (!csrf) return
-
-  console.log('get csrf')
-  console.log('post user data')
-  const register = await postUserData()
-  console.log('authenticated')
 }
 </script>
 
 <template>
-  <div class="flex min-h-full flex-col justify-center py-12 sm:px-6 lg:px-8">
+  <div class="flex min-h-full flex-col justify-center py-4 sm:px-6 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-md">
       <img
         class="mx-auto h-12 w-auto"
@@ -154,7 +126,7 @@ const register = async () => {
           </div>
 
           <div>
-            <p class="text-red-500 font-semibold">{{ errorMsg }}</p>
+            <p class="text-red-500 font-semibold">{{ authStore.errorMsg }}</p>
           </div>
           <div>
             <button
